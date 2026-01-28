@@ -7,10 +7,10 @@ const PORT = process.env.PORT || 3000;
 const SIGNATURE = "\n\n---\n👉 *Follow for more!*";
 
 // --- CONFIGURATION ---
-const PREMIUM_USERS = ['realghostzero']; // Add telegram usernames here (without @)
+const PREMIUM_USERS = ['realghostzero']; 
 const DAILY_LIMIT = 5;
-const userUsage = {}; // Tracks daily counts: { 'username': count }
-const lastSuccessMsg = {}; // Tracks { userId: messageId }
+const userUsage = {}; 
+const lastSuccessMsg = {}; 
 let totalStoriesProcessed = 0;
 
 const dictionary = {
@@ -74,23 +74,20 @@ function splitByParagraphs(text, limit = 8000) {
     return parts;
 }
 
-// Logic to insert sneaky ad for free users
 function insertSneakyAd(text) {
     const paragraphs = text.split('\n').filter(p => p.trim() !== "");
     if (paragraphs.length < 3) return text + "\n(Masked by: https://t.me/fb_story_masker_bot)";
-    
-    // Pick a random spot that isn't the very first or very last paragraph
     const randomIndex = Math.floor(Math.random() * (paragraphs.length - 2)) + 1;
     paragraphs[randomIndex] += " (Masked by: https://t.me/fb_story_masker_bot)";
-    
     return paragraphs.join('\n\n');
 }
 
 async function processAndSend(ctx, rawText) {
+    // --- FIX: Defined userId and username clearly at the start ---
+    const userId = ctx.from.id;
     const username = ctx.from.username || "NoUsername";
     const isPremium = PREMIUM_USERS.includes(username);
     
-    // Check Daily Limit for Free Users
     if (!isPremium) {
         userUsage[username] = (userUsage[username] || 0) + 1;
         if (userUsage[username] > DAILY_LIMIT) {
@@ -98,7 +95,6 @@ async function processAndSend(ctx, rawText) {
         }
     }
 
-    // Logging
     totalStoriesProcessed++;
     console.log(`[LOG] User: @${username} | Premium: ${isPremium} | Count: ${userUsage[username] || 'Admin'} | Total: ${totalStoriesProcessed}`);
 
@@ -108,7 +104,6 @@ async function processAndSend(ctx, rawText) {
         
         let processedText = maskText(rawText);
         
-        // Add sneaky ad if NOT premium
         if (!isPremium) {
             processedText = insertSneakyAd(processedText);
         }
@@ -125,15 +120,13 @@ async function processAndSend(ctx, rawText) {
             await sleep(3000); 
         }
 
-        // --- ADD THE NEW CODE RIGHT HERE ---
+        // --- SUCCESS MESSAGE CLEANUP ---
         try { await ctx.deleteMessage(statusMsg.message_id); } catch (e) {}
 
-        // Delete the previous success message if we have one saved for this user
         if (lastSuccessMsg[userId]) {
             try { await ctx.telegram.deleteMessage(ctx.chat.id, lastSuccessMsg[userId]); } catch (e) {}
         }
 
-        // Send the new success message and save its ID
         const doneMsg = await ctx.reply("✅ **DONE!** You can paste your next story now.\n\nLove this bot? Share it with a fellow writer: https://t.me/fb_story_masker_bot");
         lastSuccessMsg[userId] = doneMsg.message_id;
 
