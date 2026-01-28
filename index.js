@@ -7,17 +7,20 @@ const PORT = process.env.PORT || 3000;
 
 const SIGNATURE = "\n\n---\n👉 *Follow for the next part! (Link in comments)*";
 
-// THE COMPLETE DICTIONARY
+// --- FIXED & EXPANDED DICTIONARY ---
 const dictionary = {
-    // Sexual / Nudity
+    // Sexual / Nudity (Fixed your specific flags)
+    'pussy': 'pu$$y',
+    'tits': 't*ts',
+    'tit': 't*t',
     'sex': 's*x', 'sexy': 's3xy', 'nude': 'n*de', 'naked': 'n@ked', 'porn': 'p*rn',
-    'pussy': 'pu$$y', 'dick': 'd*ck', 'cock': 'c0ck', 'vagina': 'v@gina', 'penis': 'p3nis',
+    'dick': 'd*ck', 'cock': 'c0ck', 'vagina': 'v@gina', 'penis': 'p3nis',
     'orgasm': 'org@sm', 'clit': 'cl*t', 'ejaculate': 'ej@culate', 'condom': 'c0ndom',
     'erotic': 'er0tic', 'hentai': 'h3ntai', 'milf': 'm*lf', 'sperm': 'sp3rm',
     'boobs': 'bo0b$', 'boob': 'bo0b', 'breast': 'br3ast', 'nipple': 'n*pple', 'butt': 'bu++',
     'bra': 'br@', 'panties': 'p@nties', 'lingerie': 'ling3rie', 'threesome': '3some',
     'orgies': 'orgi3s', 'orgy': 'orgi3', 'masturbate': 'm@sturbate', 'cum': 'c*m', 
-    'cumming': 'c*mming', 'balls': 'b@lls', 'tit': 't*t', 'tits': 't*ts', 'ass': '@ss',
+    'cumming': 'c*mming', 'balls': 'b@lls', 'ass': '@ss',
 
     // Violence / Gore
     'kill': 'k*ll', 'dead': 'd3ad', 'death': 'd3ath', 'murder': 'm*rder', 'blood': 'bl00d',
@@ -27,8 +30,7 @@ const dictionary = {
 
     // Profanity
     'fuck': 'f*ck', 'fucking': 'f*ckin', 'bitch': 'bi+ch', 'shit': 'sh*t', 'asshole': 'a$$hole',
-    'bastard': 'b@stard', 'cunt': 'c*nt', 'dickhead': 'd*ckhead', 'faggot': 'f@ggot',
-    'nigger': 'n-word', 'slut': 'sl*t', 'whore': 'wh0re', 'motherfucker': 'mofo',
+    'bastard': 'b@stard', 'cunt': 'c*nt', 'slut': 'sl*t', 'whore': 'wh0re', 'motherfucker': 'mofo',
 
     // Romance / Sensitive
     'kiss': 'ki$$', 'kissing': 'ki$$ing', 'bedroom': 'b3droom', 'bed': 'b-e-d', 'moan': 'm0an',
@@ -40,16 +42,19 @@ const userSessions = {};
 const bot = new Telegraf(BOT_TOKEN);
 const app = express();
 
-app.get('/', (req, res) => res.send('Bot is Healthy'));
-app.listen(PORT, () => console.log(`Listening on ${PORT}`));
+app.get('/', (req, res) => res.send('Bot Active'));
+app.listen(PORT, () => console.log(`Server on ${PORT}`));
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 function maskText(text) {
     let result = text;
+    // Sort words by length so 'fucking' is caught before 'fuck'
     const sortedWords = Object.keys(dictionary).sort((a, b) => b.length - a.length);
     for (const word of sortedWords) {
-        const mask = dictionary[word];
+        // Use word boundaries \b to ensure we don't accidentally mask parts of normal words
         const regex = new RegExp(`\\b${word}\\b`, 'gi');
-        result = result.replace(regex, mask);
+        result = result.replace(regex, dictionary[word]);
     }
     return result;
 }
@@ -70,54 +75,55 @@ function splitByParagraphs(text, limit = 8000) {
     return parts;
 }
 
-// Utility to wait between messages
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
 async function processAndSend(ctx, rawText) {
     try {
+        await ctx.reply("⏳ Processing... Analyzing and masking text.");
+        // Deliberate 5-second wait to ensure all chunks are settled and processed
+        await sleep(5000); 
+        
         const censored = maskText(rawText);
         const parts = splitByParagraphs(censored);
         
         for (let i = 0; i < parts.length; i++) {
             const label = parts.length > 1 ? `📖 *PART ${i + 1}*\n\n` : "";
-            await ctx.reply(label + parts[i] + SIGNATURE, { parse_mode: 'Markdown' });
-            await sleep(500); // 0.5s delay to prevent Telegram flooding errors
+            try {
+                // Try sending with Markdown
+                await ctx.reply(label + parts[i] + SIGNATURE, { parse_mode: 'Markdown' });
+            } catch (err) {
+                // Fallback to plain text if a story character breaks Markdown
+                await ctx.reply(label + parts[i] + SIGNATURE);
+            }
+            await sleep(1500); // 1.5s delay between parts to prevent flood errors
         }
     } catch (e) {
-        console.error("Processing Error:", e);
-        ctx.reply("❌ Error: The text contains characters I can't process. Try sending it as a .txt file instead.");
+        console.error(e);
+        ctx.reply("❌ Error processing this story.");
     }
 }
 
 bot.command('start_story', (ctx) => {
     userSessions[ctx.from.id] = "";
-    ctx.reply('📥 Collection Mode ON. Paste your story chunks. When finished, send /end_story');
+    ctx.reply('📥 Collection Mode ON. Paste your chunks one by one. When done, send /end_story');
 });
 
 bot.command('end_story', async (ctx) => {
     const userId = ctx.from.id;
-    if (!userSessions[userId]) return ctx.reply("Your story buffer is empty!");
-    
-    ctx.reply("⏳ Processing large story... please wait.");
+    if (!userSessions[userId]) return ctx.reply("Buffer is empty!");
     await processAndSend(ctx, userSessions[userId]);
     delete userSessions[userId];
 });
 
-// DOCUMENT / TXT FILE HANDLER
+// DOCUMENT HANDLER (.txt files)
 bot.on('document', async (ctx) => {
     try {
-        const doc = ctx.message.document;
-        // Accept common text mimetypes
-        if (doc.mime_type === 'text/plain' || doc.file_name.endsWith('.txt')) {
-            ctx.reply("📄 Reading file...");
-            const fileUrl = await ctx.telegram.getFileLink(doc.file_id);
-            const response = await axios.get(fileUrl.href);
-            await processAndSend(ctx, response.data);
-        } else {
-            ctx.reply("❌ Please send a valid .txt file.");
-        }
+        const fileLink = await ctx.telegram.getFileLink(ctx.message.document.file_id);
+        // Force responseType to 'text' to handle files correctly
+        const response = await axios.get(fileLink.href, { responseType: 'text' });
+        ctx.reply("📄 File received. Starting process...");
+        await processAndSend(ctx, response.data);
     } catch (err) {
-        ctx.reply("❌ Failed to read the file.");
+        console.error(err);
+        ctx.reply("❌ Failed to read .txt file.");
     }
 });
 
@@ -128,13 +134,12 @@ bot.on('text', async (ctx) => {
 
     if (userSessions[userId] !== undefined) {
         userSessions[userId] += text + "\n";
-        // Silent collection (no reply) to avoid bot lag
-        return;
+        return; 
     }
-
     await processAndSend(ctx, text);
 });
 
 bot.launch();
+
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
