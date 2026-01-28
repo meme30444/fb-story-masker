@@ -4,9 +4,12 @@ const express = require('express');
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const PORT = process.env.PORT || 3000;
 
-const SIGNATURE = "\n\n---\n👉 *Follow for the more!*";
+const SIGNATURE = "\n\n---\n👉 *Follow for more!*";
 
-// Tracking for logs
+// --- CONFIGURATION ---
+const PREMIUM_USERS = ['realghostzero']; // Add telegram usernames here (without @)
+const DAILY_LIMIT = 5;
+const userUsage = {}; // Tracks daily counts: { 'username': count }
 let totalStoriesProcessed = 0;
 
 const dictionary = {
@@ -17,6 +20,7 @@ const dictionary = {
     'kiss': 'ki$$',
     'tits': 't*ts',
     'tit': 't*t',
+    '18+': 'one-eight+',
     'sex': 's*x', 'sexy': 's3xy', 'nude': 'n*de', 'naked': 'n@ked', 'porn': 'p*rn',
     'dick': 'd*ck', 'cock': 'c0ck', 'vagina': 'v@gina', 'penis': 'p3nis',
     'orgasm': 'org@sm', 'clit': 'cl*t', 'ejaculate': 'ej@culate', 'condom': 'c0ndom',
@@ -69,20 +73,46 @@ function splitByParagraphs(text, limit = 8000) {
     return parts;
 }
 
-async function processAndSend(ctx, rawText) {
-    const username = ctx.from.username || ctx.from.first_name || "Unknown User";
-    const userId = ctx.from.id;
+// Logic to insert sneaky ad for free users
+function insertSneakyAd(text) {
+    const paragraphs = text.split('\n').filter(p => p.trim() !== "");
+    if (paragraphs.length < 3) return text + "\n(Masked by: https://t.me/fb_story_masker_bot)";
     
-    // Log User Info to Render
+    // Pick a random spot that isn't the very first or very last paragraph
+    const randomIndex = Math.floor(Math.random() * (paragraphs.length - 2)) + 1;
+    paragraphs[randomIndex] += " (Masked by: https://t.me/fb_story_masker_bot)";
+    
+    return paragraphs.join('\n\n');
+}
+
+async function processAndSend(ctx, rawText) {
+    const username = ctx.from.username || "NoUsername";
+    const isPremium = PREMIUM_USERS.includes(username);
+    
+    // Check Daily Limit for Free Users
+    if (!isPremium) {
+        userUsage[username] = (userUsage[username] || 0) + 1;
+        if (userUsage[username] > DAILY_LIMIT) {
+            return ctx.reply("🚫 **Daily Limit Reached!**\n\nTo continue masking unlimited stories and remove the 'Protected by' links, upgrade to Lifetime Premium for just 3 USDT.\n\nMessage @realghostzero to upgrade!");
+        }
+    }
+
+    // Logging
     totalStoriesProcessed++;
-    console.log(`[LOG] User: @${username} (ID: ${userId}) | Story Length: ${rawText.length} | Total Stories Today: ${totalStoriesProcessed}`);
+    console.log(`[LOG] User: @${username} | Premium: ${isPremium} | Count: ${userUsage[username] || 'Admin'} | Total: ${totalStoriesProcessed}`);
 
     let statusMsg;
     try {
         statusMsg = await ctx.reply("⏳ **Masking Story...**");
         
-        const censored = maskText(rawText);
-        const parts = splitByParagraphs(censored);
+        let processedText = maskText(rawText);
+        
+        // Add sneaky ad if NOT premium
+        if (!isPremium) {
+            processedText = insertSneakyAd(processedText);
+        }
+
+        const parts = splitByParagraphs(processedText);
         
         for (let i = 0; i < parts.length; i++) {
             const label = parts.length > 1 ? `📖 *PART ${i + 1} OF ${parts.length}*\n\n` : "";
@@ -91,16 +121,15 @@ async function processAndSend(ctx, rawText) {
             } catch (err) {
                 await ctx.reply(label + parts[i] + SIGNATURE);
             }
-            // 3 second sleep helps keep messages in order
             await sleep(3000); 
         }
 
         try { await ctx.deleteMessage(statusMsg.message_id); } catch (e) {}
-        await ctx.reply("✅ **DONE!** You can paste your next story now.");
+        await ctx.reply("✅ **DONE!** You can paste your next story now.\n\nLove this bot? Share it with a fellow writer: https://t.me/fb_story_masker_bot");
 
     } catch (e) {
         console.error(`[ERROR] for @${username}:`, e);
-        ctx.reply("❌ Error processing your story. It might be too large for a single paste.");
+        ctx.reply("❌ Error processing your story.");
     }
 }
 
