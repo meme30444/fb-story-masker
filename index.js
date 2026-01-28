@@ -13,31 +13,97 @@ const userUsage = {};
 const lastSuccessMsg = {}; 
 let totalStoriesProcessed = 0;
 
+// --- EXPANDED & CATEGORIZED DICTIONARY ---
 const dictionary = {
+    // Priority Sexual/Sensitive (Ensuring double $$)
     'massage': 'ma$$age',
+    'massaged': 'ma$$aged',
+    'massaging': 'ma$$aging',
     'pussy': 'pu$$y',
-    'kisses': 'ki$$es',
-    'kissing': 'ki$$ing',
-    'kiss': 'ki$$',
-    'tits': 't*ts',
-    'tit': 't*t',
-    '18+': 'one-eight+',
-    'sex': 's*x', 'sexy': 's3xy', 'nude': 'n*de', 'naked': 'n@ked', 'porn': 'p*rn',
-    'dick': 'd*ck', 'cock': 'c0ck', 'vagina': 'v@gina', 'penis': 'p3nis',
-    'orgasm': 'org@sm', 'clit': 'cl*t', 'ejaculate': 'ej@culate', 'condom': 'c0ndom',
-    'erotic': 'er0tic', 'hentai': 'h3ntai', 'milf': 'm*lf', 'sperm': 'sp3rm',
-    'boobs': 'bo0b$', 'boob': 'bo0b', 'breast': 'br3ast', 'nipple': 'n*pple', 'butt': 'bu++',
-    'bra': 'br@', 'panties': 'p@nties', 'lingerie': 'ling3rie', 'threesome': '3some',
-    'orgies': 'orgi3s', 'orgy': 'orgi3', 'masturbate': 'm@sturbate', 'cum': 'c*m', 
-    'cumming': 'c*mming', 'balls': 'b@lls', 'ass': '@ss',
-    'kill': 'k*ll', 'dead': 'd3ad', 'death': 'd3ath', 'murder': 'm*rder', 'blood': 'bl00d',
-    'suicide': 'sui-cide', 'rape': 'r@pe', 'torture': 't0rture', 'stab': 'st@b',
-    'shoot': 'sh00t', 'bullet': 'b*llet', 'strangle': 'str@ngle', 'corpse': 'c0rpse', 
-    'gun': 'g*n', 'weapon': 'we@pon',
-    'fuck': 'f*ck', 'fucking': 'f*ckin', 'bitch': 'bi+ch', 'shit': 'sh*t', 'asshole': 'a$$hole',
-    'bastard': 'b@stard', 'cunt': 'c*nt', 'slut': 'sl*t', 'whore': 'wh0re', 'motherfucker': 'mofo',
-    'bedroom': 'b3droom', 'bed': 'b-e-d', 'moan': 'm0an', 'tongue': 't0ngue', 'nakedness': 'n@kedness', 
-    'naughty': 'n@ughty', 'desire': 'des*re'
+    'kisses': 'k!sses',
+    'kissing': 'k!ssing',
+    'kiss': 'k!ss',
+
+    // Nudity/Sex
+    'sex': 's*x',
+    'sexy': 's3xy',
+    'sexting': 's*xting',
+    'nude': 'n*de',
+    'nudes': 'n*des',
+    'naked': 'n@ked',
+    'nakedness': 'n@kedness',
+    'porn': 'p*rn',
+    'dick': 'd!ck',
+    'cock': 'c0ck',
+    'vagina': 'v@gina',
+    'penis': 'p3nis',
+    'orgasm': 'org@sm',
+    'clit': 'cl!t',
+    'ejaculate': 'ej@culate',
+    'condom': 'c0ndom',
+    'erotic': 'er0tic',
+    'hentai': 'h3ntai',
+    'milf': 'm!lf',
+    'sperm': 'sp3rm',
+    'boobs': 'bo0b$',
+    'boob': 'bo0b',
+    'breast': 'br3ast',
+    'nipple': 'n!pple',
+    'tits': 't!ts',
+    'tit': 't!t',
+    'butt': 'bu++',
+    'bra': 'br@',
+    'panties': 'p@nties',
+    'lingerie': 'ling3rie',
+    'threesome': '3some',
+    'orgies': 'orgi3s',
+    'orgy': 'orgi3',
+    'masturbate': 'm@sturbate',
+    'cum': 'c*m',
+    'cumming': 'c*mming',
+    'balls': 'b@lls',
+    'ass': '@ss',
+
+    // Violence
+    'kill': 'k*ll',
+    'killing': 'k*lling',
+    'killed': 'k*lled',
+    'dead': 'd3ad',
+    'death': 'd3ath',
+    'murder': 'm*rder',
+    'blood': 'bl00d',
+    'suicide': 'sui-cide',
+    'rape': 'r@pe',
+    'torture': 't0rture',
+    'stab': 'st@b',
+    'shoot': 'sh00t',
+    'bullet': 'b*llet',
+    'strangle': 'str@ngle',
+    'corpse': 'c0rpse',
+    'gun': 'g*n',
+    'weapon': 'we@pon',
+
+    // Profanity
+    'fuck': 'f*ck',
+    'fucking': 'f*ckin',
+    'fucked': 'f*cked',
+    'bitch': 'bi+ch',
+    'shit': 'sh*t',
+    'asshole': 'a$$hole',
+    'bastard': 'b@stard',
+    'cunt': 'c*nt',
+    'slut': 'sl*t',
+    'whore': 'wh0re',
+    'motherfucker': 'mofo',
+
+    // Sensitive Environments
+    'bedroom': 'b3droom',
+    'bed': 'b-e-d',
+    'moan': 'm0an',
+    'moaning': 'm0aning',
+    'tongue': 't0ngue',
+    'naughty': 'n@ughty',
+    'desire': 'des*re'
 };
 
 const bot = new Telegraf(BOT_TOKEN);
@@ -48,11 +114,14 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// --- MODIFIED MASKING FUNCTION WITH WORD BOUNDARIES ---
 function maskText(text) {
     let result = text;
     const sortedKeys = Object.keys(dictionary).sort((a, b) => b.length - a.length);
     for (const word of sortedKeys) {
-        const regex = new RegExp(word, 'gi');
+        // \b ensures we only match whole words (e.g., 'gun' but not 'begun')
+        // [^a-zA-Z0-9] handles boundaries if \b acts up with special symbols
+        const regex = new RegExp(`\\b${word}\\b`, 'gi');
         result = result.replace(regex, dictionary[word]);
     }
     return result;
@@ -83,7 +152,6 @@ function insertSneakyAd(text) {
 }
 
 async function processAndSend(ctx, rawText) {
-    // --- FIX: Defined userId and username clearly at the start ---
     const userId = ctx.from.id;
     const username = ctx.from.username || "NoUsername";
     const isPremium = PREMIUM_USERS.includes(username);
@@ -120,7 +188,6 @@ async function processAndSend(ctx, rawText) {
             await sleep(3000); 
         }
 
-        // --- SUCCESS MESSAGE CLEANUP ---
         try { await ctx.deleteMessage(statusMsg.message_id); } catch (e) {}
 
         if (lastSuccessMsg[userId]) {
