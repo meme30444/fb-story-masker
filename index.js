@@ -5,14 +5,19 @@ const axios = require('axios');
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const PORT = process.env.PORT || 3000;
 
-const SIGNATURE = "\n\n---\n👉 *Follow for the next part! (Link in comments)*";
+const SIGNATURE = "\n\n---\n👉 *Follow for the more!*";
 
-// ENHANCED DICTIONARY - ENSURING DOUBLE SYMBOLS
 const dictionary = {
+    // Priority Sexual/Sensitive (Ensuring double $$)
     'massage': 'ma$$age',
     'pussy': 'pu$$y',
+    'kisses': 'ki$$es',
+    'kissing': 'ki$$ing',
+    'kiss': 'ki$$',
     'tits': 't*ts',
     'tit': 't*t',
+    
+    // Nudity/Sex
     'sex': 's*x', 'sexy': 's3xy', 'nude': 'n*de', 'naked': 'n@ked', 'porn': 'p*rn',
     'dick': 'd*ck', 'cock': 'c0ck', 'vagina': 'v@gina', 'penis': 'p3nis',
     'orgasm': 'org@sm', 'clit': 'cl*t', 'ejaculate': 'ej@culate', 'condom': 'c0ndom',
@@ -21,14 +26,18 @@ const dictionary = {
     'bra': 'br@', 'panties': 'p@nties', 'lingerie': 'ling3rie', 'threesome': '3some',
     'orgies': 'orgi3s', 'orgy': 'orgi3', 'masturbate': 'm@sturbate', 'cum': 'c*m', 
     'cumming': 'c*mming', 'balls': 'b@lls', 'ass': '@ss',
+
+    // Violence
     'kill': 'k*ll', 'dead': 'd3ad', 'death': 'd3ath', 'murder': 'm*rder', 'blood': 'bl00d',
     'suicide': 'sui-cide', 'rape': 'r@pe', 'torture': 't0rture', 'stab': 'st@b',
     'shoot': 'sh00t', 'bullet': 'b*llet', 'strangle': 'str@ngle', 'corpse': 'c0rpse', 
-    'gun': 'g*n', 'weapon': 'we@pon', 'fuck': 'f*ck', 'fucking': 'f*ckin', 'bitch': 'bi+ch', 
-    'shit': 'sh*t', 'asshole': 'a$$hole', 'bastard': 'b@stard', 'cunt': 'c*nt', 'slut': 'sl*t', 
-    'whore': 'wh0re', 'motherfucker': 'mofo', 'kiss': 'ki$$', 'kissing': 'ki$$ing', 
+    'gun': 'g*n', 'weapon': 'we@pon',
+
+    // Profanity
+    'fuck': 'f*ck', 'fucking': 'f*ckin', 'bitch': 'bi+ch', 'shit': 'sh*t', 'asshole': 'a$$hole',
+    'bastard': 'b@stard', 'cunt': 'c*nt', 'slut': 'sl*t', 'whore': 'wh0re', 'motherfucker': 'mofo',
     'bedroom': 'b3droom', 'bed': 'b-e-d', 'moan': 'm0an', 'tongue': 't0ngue', 'nakedness': 'n@kedness', 
-    'naughty': 'n@ughty', 'desire': 'des*re', '18+': 'one-eight+'
+    'naughty': 'n@ughty', 'desire': 'des*re'
 };
 
 const userSessions = {};
@@ -36,16 +45,18 @@ const bot = new Telegraf(BOT_TOKEN);
 const app = express();
 
 app.get('/', (req, res) => res.send('Bot Active'));
-app.listen(PORT, () => console.log(`Server on ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 function maskText(text) {
     let result = text;
-    // Sort words by length descending
-    const sortedWords = Object.keys(dictionary).sort((a, b) => b.length - a.length);
-    for (const word of sortedWords) {
-        const regex = new RegExp(word, 'gi'); // Removed \b for more aggressive matching
+    // We sort by length so "kissing" is masked before "kiss"
+    const sortedKeys = Object.keys(dictionary).sort((a, b) => b.length - a.length);
+    
+    for (const word of sortedKeys) {
+        // Simple case-insensitive global replacement
+        const regex = new RegExp(word, 'gi');
         result = result.replace(regex, dictionary[word]);
     }
     return result;
@@ -70,43 +81,49 @@ function splitByParagraphs(text, limit = 8000) {
 async function processAndSend(ctx, rawText) {
     let statusMsg;
     try {
-        statusMsg = await ctx.reply("⏳ Processing... Analyzing and masking text (approx 5-10s)");
-        await sleep(5000); // Wait for Telegram to finish delivering all parts
+        statusMsg = await ctx.reply("⏳ **Step 1: Analyzing and Masking Story...**");
         
+        // Final cleaning and splitting
         const censored = maskText(rawText);
         const parts = splitByParagraphs(censored);
         
-        // Delete the status message once we start sending
-        try { await ctx.deleteMessage(statusMsg.message_id); } catch (e) {}
+        await ctx.telegram.editMessageText(ctx.chat.id, statusMsg.message_id, null, `⏳ **Step 2: Sending ${parts.length} Parts in order...**`);
 
         for (let i = 0; i < parts.length; i++) {
-            const label = parts.length > 1 ? `📖 *PART ${i + 1}*\n\n` : "";
+            const label = parts.length > 1 ? `📖 *PART ${i + 1} OF ${parts.length}*\n\n` : "";
             try {
                 await ctx.reply(label + parts[i] + SIGNATURE, { parse_mode: 'Markdown' });
             } catch (err) {
+                // If Markdown fails (symbols like [ or _), send as plain text
                 await ctx.reply(label + parts[i] + SIGNATURE);
             }
-            // 2 second delay to ensure Telegram maintains message order
-            await sleep(2000); 
+            // 3 second delay is the "Sweet Spot" for Telegram order consistency
+            await sleep(3000); 
         }
+
+        // Final cleanup and completion alert
+        try { await ctx.deleteMessage(statusMsg.message_id); } catch (e) {}
+        await ctx.reply("✅ **TASK COMPLETE.**\nYou can now paste another story or upload a .txt file.");
+
     } catch (e) {
-        if (statusMsg) try { await ctx.deleteMessage(statusMsg.message_id); } catch (ex) {}
-        ctx.reply("❌ Error processing story.");
+        console.error(e);
+        ctx.reply("❌ Error processing your story. It might be too large or have weird characters.");
     }
 }
 
+// Handlers
 bot.start((ctx) => {
-    ctx.reply('✅ Bot Online! Send me your story directly, or use /start_story to combine multiple pastes.');
+    ctx.reply('✅ **FB Story Masker is Online!**\n\n1. Paste a story directly.\n2. Use /start_story for multiple pastes.\n3. Send a .txt file.');
 });
 
 bot.command('start_story', (ctx) => {
     userSessions[ctx.from.id] = "";
-    ctx.reply('📥 Collection Mode ON. Paste your chunks. When done, send /end_story');
+    ctx.reply('📥 **Collection Mode ON.**\nPaste your chunks now. When you have sent everything, send /end_story');
 });
 
 bot.command('end_story', async (ctx) => {
     const userId = ctx.from.id;
-    if (!userSessions[userId]) return ctx.reply("Buffer is empty!");
+    if (!userSessions[userId]) return ctx.reply("❌ Nothing in the buffer! Paste some text first.");
     await processAndSend(ctx, userSessions[userId]);
     delete userSessions[userId];
 });
@@ -114,11 +131,15 @@ bot.command('end_story', async (ctx) => {
 bot.on('document', async (ctx) => {
     try {
         const fileLink = await ctx.telegram.getFileLink(ctx.message.document.file_id);
+        // Better file reading: responseType 'arraybuffer' is the safest for all server types
         const response = await axios.get(fileLink.href, { responseType: 'arraybuffer' });
-        const text = Buffer.from(response.data, 'utf-8').toString();
-        await processAndSend(ctx, text);
+        const textData = Buffer.from(response.data).toString('utf-8');
+        
+        await ctx.reply("📄 **File received.** Reading content...");
+        await processAndSend(ctx, textData);
     } catch (err) {
-        ctx.reply("❌ Failed to read file.");
+        console.error(err);
+        ctx.reply("❌ Failed to read that file. Ensure it is a standard .txt file.");
     }
 });
 
