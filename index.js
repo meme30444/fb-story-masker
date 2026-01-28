@@ -4,7 +4,7 @@ const express = require('express');
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const PORT = process.env.PORT || 3000;
 
-const SIGNATURE = "\n\n---\n👉 *Follow for the next part! (Link in comments)*";
+const SIGNATURE = "\n\n---\n👉 *Follow for the more!*";
 
 // Tracking for logs
 let totalStoriesProcessed = 0;
@@ -17,7 +17,6 @@ const dictionary = {
     'kiss': 'ki$$',
     'tits': 't*ts',
     'tit': 't*t',
-    '18+': 'one-eight+',
     'sex': 's*x', 'sexy': 's3xy', 'nude': 'n*de', 'naked': 'n@ked', 'porn': 'p*rn',
     'dick': 'd*ck', 'cock': 'c0ck', 'vagina': 'v@gina', 'penis': 'p3nis',
     'orgasm': 'org@sm', 'clit': 'cl*t', 'ejaculate': 'ej@culate', 'condom': 'c0ndom',
