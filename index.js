@@ -10,6 +10,7 @@ const SIGNATURE = "\n\n---\n👉 *Follow for more!*";
 const PREMIUM_USERS = ['realghostzero']; // Add telegram usernames here (without @)
 const DAILY_LIMIT = 5;
 const userUsage = {}; // Tracks daily counts: { 'username': count }
+const lastSuccessMsg = {}; // Tracks { userId: messageId }
 let totalStoriesProcessed = 0;
 
 const dictionary = {
@@ -124,8 +125,17 @@ async function processAndSend(ctx, rawText) {
             await sleep(3000); 
         }
 
+        // --- ADD THE NEW CODE RIGHT HERE ---
         try { await ctx.deleteMessage(statusMsg.message_id); } catch (e) {}
-        await ctx.reply("✅ **DONE!** You can paste your next story now.\n\nLove this bot? Share it with a fellow writer: https://t.me/fb_story_masker_bot");
+
+        // Delete the previous success message if we have one saved for this user
+        if (lastSuccessMsg[userId]) {
+            try { await ctx.telegram.deleteMessage(ctx.chat.id, lastSuccessMsg[userId]); } catch (e) {}
+        }
+
+        // Send the new success message and save its ID
+        const doneMsg = await ctx.reply("✅ **DONE!** You can paste your next story now.\n\nLove this bot? Share it with a fellow writer: https://t.me/fb_story_masker_bot");
+        lastSuccessMsg[userId] = doneMsg.message_id;
 
     } catch (e) {
         console.error(`[ERROR] for @${username}:`, e);
