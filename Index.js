@@ -5,27 +5,34 @@ const express = require('express');
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const PORT = process.env.PORT || 3000;
 
+// This signature will be added to every part sent
+const SIGNATURE = "\n\n---\n👉 *Follow for the next part! (Link in comments)*";
+
 // COMPREHENSIVE MASKING DICTIONARY
 const dictionary = {
-    // Nudity / Body Parts
+    // Sexual / Nudity
     'sex': 's*x', 'sexy': 's3xy', 'nude': 'n*de', 'naked': 'n@ked', 'porn': 'p*rn',
     'pussy': 'pu$$y', 'dick': 'd*ck', 'cock': 'c0ck', 'vagina': 'v@gina', 'penis': 'p3nis',
     'orgasm': 'org@sm', 'clit': 'cl*t', 'ejaculate': 'ej@culate', 'condom': 'c0ndom',
     'erotic': 'er0tic', 'hentai': 'h3ntai', 'milf': 'm*lf', 'sperm': 'sp3rm',
     'boobs': 'bo0b$', 'boob': 'bo0b', 'breast': 'br3ast', 'nipple': 'n*pple', 'butt': 'bu++',
-    
+    'bra': 'br@', 'panties': 'p@nties', 'lingerie': 'ling3rie', 'threesome': '3some',
+    'orgies': 'orgi3s', 'orgy': 'orgi3', 'masturbate': 'm@sturbate',
+
     // Violence / Gore
     'kill': 'k*ll', 'dead': 'd3ad', 'death': 'd3ath', 'murder': 'm*rder', 'blood': 'bl00d',
     'suicide': 'sui-cide', 'rape': 'r@pe', 'torture': 't0rture', 'stab': 'st@b',
-    'shoot': 'sh00t', 'bullet': 'b*llet', 'strangle': 'str@ngle', 'corpse': 'c0rpse',
-    
+    'shoot': 'sh00t', 'bullet': 'b*llet', 'strangle': 'str@ngle', 'corpse': 'c0rpse', 'gun': 'g*n',
+    'weapon': 'we@pon', 'execution': 'executio-n',
+
     // Profanity
     'fuck': 'f*ck', 'fucking': 'f*ckin', 'bitch': 'bi+ch', 'shit': 'sh*t', 'asshole': 'a$$hole',
     'bastard': 'b@stard', 'cunt': 'c*nt', 'dickhead': 'd*ckhead', 'faggot': 'f@ggot',
     'nigger': 'n-word', 'slut': 'sl*t', 'whore': 'wh0re', 'motherfucker': 'mofo',
-    
+
     // Romance / Sensitive
-    'kiss': 'ki$$', 'kissing': 'ki$$ing', 'bedroom': 'b3droom', 'bed': 'b-e-d'
+    'kiss': 'ki$$', 'kissing': 'ki$$ing', 'bedroom': 'b3droom', 'bed': 'b-e-d', 'moan': 'm0an',
+    'tongue': 't0ngue', 'nakedness': 'n@kedness'
 };
 
 const bot = new Telegraf(BOT_TOKEN);
@@ -38,19 +45,19 @@ app.listen(PORT, () => console.log(`Web server listening on port ${PORT}`));
 // Function to mask words
 function maskText(text) {
     let result = text;
-    // Sort keys by length descending to catch 'fucking' before 'fuck'
+    // Sort keys by length descending so we catch 'kissing' before 'kiss'
     const sortedWords = Object.keys(dictionary).sort((a, b) => b.length - a.length);
     
     for (const word of sortedWords) {
         const mask = dictionary[word];
-        // \b ensures we only hit whole words, gi = global and case-insensitive
+        // Use Word Boundaries \b to avoid breaking words like "assessment"
         const regex = new RegExp(`\\b${word}\\b`, 'gi');
         result = result.replace(regex, mask);
     }
     return result;
 }
 
-// Function to split text without breaking paragraphs
+// Function to split text without breaking paragraphs (approx 3500 chars)
 function splitByParagraphs(text, limit = 3500) {
     const paragraphs = text.split('\n');
     const parts = [];
@@ -79,9 +86,9 @@ bot.on('text', async (ctx) => {
         const parts = splitByParagraphs(censored);
 
         for (let i = 0; i < parts.length; i++) {
-            const label = parts.length > 1 ? `📝 **PART ${i + 1}**\n\n` : "";
-            // Using Markdown formatting for the label
-            await ctx.reply(label + parts[i], { parse_mode: 'Markdown' });
+            const label = parts.length > 1 ? `📖 *PART ${i + 1}*\n\n` : "";
+            // Combine Label + Censored Text + Signature
+            await ctx.reply(label + parts[i] + SIGNATURE, { parse_mode: 'Markdown' });
         }
     } catch (e) {
         console.error("Error processing text:", e);
@@ -94,7 +101,7 @@ bot.launch()
     .then(() => console.log('Telegram Bot Started'))
     .catch((err) => console.error('Failed to launch bot:', err));
 
-// ENABLE GRACEFUL STOP (Crucial for Render/Production)
+// ENABLE GRACEFUL STOP (Crucial for Render/Production restarts)
 process.once('SIGINT', () => {
     console.log('SIGINT signal received: closing bot');
     bot.stop('SIGINT');
