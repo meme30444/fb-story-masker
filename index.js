@@ -1,4 +1,4 @@
-const { Telegraf } = require('telegraf');
+'b3droom'oom { Telegraf } = require('telegraf');
 const express = require('express');
 const axios = require('axios'); // Add this line here
 
@@ -99,7 +99,7 @@ const dictionary = {
     'motherfucker': 'mofo',
 
     // Sensitive Environments
-    'bedroom: 'b3droom',
+    'bedroom': 'b3droom',
     'bed': 'b3d',
     'moan': 'm0an',
     'moaning': 'm0aning',
