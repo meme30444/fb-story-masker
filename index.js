@@ -1,5 +1,7 @@
 const { Telegraf } = require('telegraf');
 const express = require('express');
+const axios = require('axios'); // Add this line here
+
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const PORT = process.env.PORT || 3000;
@@ -212,6 +214,16 @@ bot.on('text', async (ctx) => {
     if (text.startsWith('/')) return;
     await processAndSend(ctx, text);
 });
+
+// Internal Heartbeat to prevent sleeping
+setInterval(() => {
+    axios.get(`https://fb-story-masker.onrender.com/`).then(() => {
+        console.log("Internal heartbeat: Success");
+    }).catch((err) => {
+        console.log("Internal heartbeat: Pinged");
+    });
+}, 840000); // 14 minutes
+
 
 bot.launch();
 process.once('SIGINT', () => bot.stop('SIGINT'));
