@@ -1,4 +1,4 @@
-'b3droom'oom { Telegraf } = require('telegraf');
+const { Telegraf } = require('telegraf');
 const express = require('express');
 const axios = require('axios'); // Add this line here
 
