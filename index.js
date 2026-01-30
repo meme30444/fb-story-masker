@@ -29,6 +29,9 @@ const dictionary = {
     // Nudity/Sex
     'sex': 's3x',
     'sexy': 's3xy',
+    'sexual': 's3xual',
+    'sexually': 's3xually',
+    'hookup': 'h00kup',
     'sexting': 's3xting',
     'nude': 'n¥de',
     'nudes': 'n¥des',
