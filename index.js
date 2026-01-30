@@ -6,7 +6,7 @@ const axios = require('axios'); // Add this line here
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const PORT = process.env.PORT || 3000;
 
-const SIGNATURE = "\n\n---\n👉 *Follow for more!*";
+const SIGNATURE = "\n\n---\n👉 Follow for more!";
 
 // --- CONFIGURATION ---
 const PREMIUM_USERS = ['realghostzero']; 
