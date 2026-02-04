@@ -8,10 +8,10 @@ const PORT = process.env.PORT || 3000;
 const SIGNATURE = "\n\n---\n👉 Follow for more!";
 
 // --- CONFIGURATION ---
-const OWNER_ID = 8327146852; // Your Telegram ID from the logs
+const OWNER_ID = 8327146852; // Your Telegram ID
 const PREMIUM_USERS = ['realghostzero']; 
 const DAILY_LIMIT = 5;
-const userDatabase = {}; // New Tracking Database: { userId: { username, count, isPremium } }
+const userDatabase = {}; // Logic: { userId: { username, count, isPremium } }
 const lastSuccessMsg = {}; 
 let totalStoriesProcessed = 0;
 
@@ -123,6 +123,7 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// --- MASKING LOGIC ---
 function maskText(text) {
     let result = text;
     const sortedKeys = Object.keys(dictionary).sort((a, b) => b.length - a.length);
@@ -133,6 +134,7 @@ function maskText(text) {
     return result;
 }
 
+// --- SPLITTING LOGIC ---
 function splitByParagraphs(text, limit = 8000) {
     const paragraphs = text.split('\n');
     const parts = [];
@@ -149,6 +151,7 @@ function splitByParagraphs(text, limit = 8000) {
     return parts;
 }
 
+// --- AD INSERTION ---
 function insertSneakyAd(text) {
     const paragraphs = text.split('\n').filter(p => p.trim() !== "");
     if (paragraphs.length < 3) return text + "\n(Masked by: https://t.me/fb_story_masker_bot)";
@@ -157,19 +160,37 @@ function insertSneakyAd(text) {
     return paragraphs.join('\n\n');
 }
 
+// --- CORE REPORT GENERATOR ---
+function generateReport() {
+    if (Object.keys(userDatabase).length === 0) return "📊 **No activity recorded yet.**";
+
+    let report = "📊 **BUSINESS REPORT**\n\n";
+    report += `📈 **Total Stories (Session):** ${totalStoriesProcessed}\n`;
+    report += `👥 **Total Unique Users:** ${Object.keys(userDatabase).length}\n\n`;
+    report += "📝 **User Breakdown:**\n";
+
+    for (const id in userDatabase) {
+        const user = userDatabase[id];
+        const badge = user.isPremium ? "💎" : "🆓";
+        report += `${badge} @${user.username}: ${user.count} stories\n`;
+    }
+    return report;
+}
+
+// --- MAIN PROCESSOR ---
 async function processAndSend(ctx, rawText) {
     const userId = ctx.from.id;
     const username = ctx.from.username || ctx.from.first_name || "NoUsername";
     const isPremium = PREMIUM_USERS.includes(ctx.from.username);
     
-    // --- SMART TRACKING LOGIC ---
+    // Track unique users and their counts
     if (!userDatabase[userId]) {
         userDatabase[userId] = { username: username, count: 0, isPremium: isPremium };
     }
     userDatabase[userId].count++;
-    userDatabase[userId].username = username; // Keeps username updated
+    userDatabase[userId].username = username;
 
-    // Check Daily Limit using userId for accuracy
+    // Check usage limits
     if (!isPremium && userDatabase[userId].count > DAILY_LIMIT) {
         return ctx.reply("🚫 **Daily Limit Reached!**\n\nTo continue masking unlimited stories and remove the 'Protected by' links, upgrade to Lifetime Premium for just 3 USDT.\n\nMessage @realghostzero to upgrade!");
     }
@@ -180,7 +201,6 @@ async function processAndSend(ctx, rawText) {
     let statusMsg;
     try {
         statusMsg = await ctx.reply("⏳ **Masking Story...**");
-        
         let processedText = maskText(rawText);
         
         if (!isPremium) {
@@ -214,8 +234,18 @@ async function processAndSend(ctx, rawText) {
     }
 }
 
+// --- COMMANDS ---
 bot.start((ctx) => {
     ctx.reply('✅ **FB Story Masker Online**\n\nJust paste your story directly here, and I will mask it and split it for you.');
+});
+
+// Manual Stats Command (Owner Only)
+bot.command('stats', (ctx) => {
+    if (ctx.from.id === OWNER_ID) {
+        ctx.reply(generateReport());
+    } else {
+        ctx.reply("❌ Unauthorized. This command is for the owner only.");
+    }
 });
 
 bot.on('text', async (ctx) => {
@@ -224,20 +254,10 @@ bot.on('text', async (ctx) => {
     await processAndSend(ctx, text);
 });
 
-// --- HOURLY BUSINESS REPORT ---
+// --- HOURLY AUTOMATED REPORT ---
 setInterval(async () => {
-    if (Object.keys(userDatabase).length === 0) return;
-
-    let report = "📊 **HOURLY BUSINESS REPORT**\n\n";
-    report += `📈 **Total Stories (Session):** ${totalStoriesProcessed}\n`;
-    report += `👥 **Total Unique Users:** ${Object.keys(userDatabase).length}\n\n`;
-    report += "📝 **User Breakdown:**\n";
-
-    for (const id in userDatabase) {
-        const user = userDatabase[id];
-        const badge = user.isPremium ? "💎" : "🆓";
-        report += `${badge} @${user.username}: ${user.count} stories\n`;
-    }
+    const report = generateReport();
+    if (report.includes("No activity")) return;
 
     try {
         await bot.telegram.sendMessage(OWNER_ID, report);
@@ -245,16 +265,16 @@ setInterval(async () => {
     } catch (e) {
         console.error("[REPORT ERROR] Could not send report:", e);
     }
-}, 3600000); // Hourly
+}, 3600000); 
 
-// --- INTERNAL HEARTBEAT ---
+// --- INTERNAL HEARTBEAT (12.5 MINS) ---
 setInterval(() => {
     axios.get(`https://fb-story-masker.onrender.com/`).then(() => {
         console.log("Internal heartbeat: Success");
     }).catch((err) => {
         console.log("Internal heartbeat: Pinged");
     });
-}, 750000); // Adjusted to 12.5 minutes (750,000 ms)
+}, 750000); 
 
 
 bot.launch();
