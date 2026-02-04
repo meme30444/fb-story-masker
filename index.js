@@ -1,7 +1,6 @@
 const { Telegraf } = require('telegraf');
 const express = require('express');
-const axios = require('axios'); // Add this line here
-
+const axios = require('axios');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const PORT = process.env.PORT || 3000;
@@ -9,15 +8,16 @@ const PORT = process.env.PORT || 3000;
 const SIGNATURE = "\n\n---\n👉 Follow for more!";
 
 // --- CONFIGURATION ---
+const OWNER_ID = 8327146852; // Your Telegram ID from the logs
 const PREMIUM_USERS = ['realghostzero']; 
 const DAILY_LIMIT = 5;
-const userUsage = {}; 
+const userDatabase = {}; // New Tracking Database: { userId: { username, count, isPremium } }
 const lastSuccessMsg = {}; 
 let totalStoriesProcessed = 0;
 
 // --- EXPANDED & CATEGORIZED DICTIONARY ---
 const dictionary = {
-    // Priority Sexual/Sensitive (Ensuring double $$)
+    // Priority Sexual/Sensitive
     'massage': 'ma$$age',
     'massaged': 'ma$$aged',
     'massaging': 'ma$$aging',
@@ -123,13 +123,10 @@ app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// --- MODIFIED MASKING FUNCTION WITH WORD BOUNDARIES ---
 function maskText(text) {
     let result = text;
     const sortedKeys = Object.keys(dictionary).sort((a, b) => b.length - a.length);
     for (const word of sortedKeys) {
-        // \b ensures we only match whole words (e.g., 'gun' but not 'begun')
-        // [^a-zA-Z0-9] handles boundaries if \b acts up with special symbols
         const regex = new RegExp(`\\b${word}\\b`, 'gi');
         result = result.replace(regex, dictionary[word]);
     }
@@ -162,18 +159,23 @@ function insertSneakyAd(text) {
 
 async function processAndSend(ctx, rawText) {
     const userId = ctx.from.id;
-    const username = ctx.from.username || "NoUsername";
-    const isPremium = PREMIUM_USERS.includes(username);
+    const username = ctx.from.username || ctx.from.first_name || "NoUsername";
+    const isPremium = PREMIUM_USERS.includes(ctx.from.username);
     
-    if (!isPremium) {
-        userUsage[username] = (userUsage[username] || 0) + 1;
-        if (userUsage[username] > DAILY_LIMIT) {
-            return ctx.reply("🚫 **Daily Limit Reached!**\n\nTo continue masking unlimited stories and remove the 'Protected by' links, upgrade to Lifetime Premium for just 3 USDT.\n\nMessage @realghostzero to upgrade!");
-        }
+    // --- SMART TRACKING LOGIC ---
+    if (!userDatabase[userId]) {
+        userDatabase[userId] = { username: username, count: 0, isPremium: isPremium };
+    }
+    userDatabase[userId].count++;
+    userDatabase[userId].username = username; // Keeps username updated
+
+    // Check Daily Limit using userId for accuracy
+    if (!isPremium && userDatabase[userId].count > DAILY_LIMIT) {
+        return ctx.reply("🚫 **Daily Limit Reached!**\n\nTo continue masking unlimited stories and remove the 'Protected by' links, upgrade to Lifetime Premium for just 3 USDT.\n\nMessage @realghostzero to upgrade!");
     }
 
     totalStoriesProcessed++;
-    console.log(`[LOG] User: @${username} | Premium: ${isPremium} | Count: ${userUsage[username] || 'Admin'} | Total: ${totalStoriesProcessed}`);
+    console.log(`[LOG] User: @${username} (ID: ${userId}) | Premium: ${isPremium} | Count: ${userDatabase[userId].count} | Total: ${totalStoriesProcessed}`);
 
     let statusMsg;
     try {
@@ -222,14 +224,37 @@ bot.on('text', async (ctx) => {
     await processAndSend(ctx, text);
 });
 
-// Internal Heartbeat to prevent sleeping
+// --- HOURLY BUSINESS REPORT ---
+setInterval(async () => {
+    if (Object.keys(userDatabase).length === 0) return;
+
+    let report = "📊 **HOURLY BUSINESS REPORT**\n\n";
+    report += `📈 **Total Stories (Session):** ${totalStoriesProcessed}\n`;
+    report += `👥 **Total Unique Users:** ${Object.keys(userDatabase).length}\n\n`;
+    report += "📝 **User Breakdown:**\n";
+
+    for (const id in userDatabase) {
+        const user = userDatabase[id];
+        const badge = user.isPremium ? "💎" : "🆓";
+        report += `${badge} @${user.username}: ${user.count} stories\n`;
+    }
+
+    try {
+        await bot.telegram.sendMessage(OWNER_ID, report);
+        console.log("[REPORT] Hourly stats sent to Owner.");
+    } catch (e) {
+        console.error("[REPORT ERROR] Could not send report:", e);
+    }
+}, 3600000); // Hourly
+
+// --- INTERNAL HEARTBEAT ---
 setInterval(() => {
     axios.get(`https://fb-story-masker.onrender.com/`).then(() => {
         console.log("Internal heartbeat: Success");
     }).catch((err) => {
         console.log("Internal heartbeat: Pinged");
     });
-}, 840000); // 14 minutes
+}, 750000); // Adjusted to 12.5 minutes (750,000 ms)
 
 
 bot.launch();
