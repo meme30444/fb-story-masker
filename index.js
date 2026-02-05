@@ -8,7 +8,8 @@ const PORT = process.env.PORT || 3000;
 const SIGNATURE = "\n\n---\n👉 Follow for more!";
 
 // --- CONFIGURATION ---
-const OWNER_ID = 8327146852; // Your Telegram ID
+const OWNER_USERNAME = 'realghostzero'; // Updated to use username instead of ID
+const OWNER_ID = 8327146852; // Kept for the automated hourly report destination
 const PREMIUM_USERS = ['realghostzero']; 
 const DAILY_LIMIT = 5;
 const userDatabase = {}; // Logic: { userId: { username, count, isPremium } }
@@ -183,7 +184,7 @@ async function processAndSend(ctx, rawText) {
     const username = ctx.from.username || ctx.from.first_name || "NoUsername";
     const isPremium = PREMIUM_USERS.includes(ctx.from.username);
     
-    // Track unique users and their counts
+    // Track unique users and their counts using userId as the permanent key
     if (!userDatabase[userId]) {
         userDatabase[userId] = { username: username, count: 0, isPremium: isPremium };
     }
@@ -239,9 +240,9 @@ bot.start((ctx) => {
     ctx.reply('✅ **FB Story Masker Online**\n\nJust paste your story directly here, and I will mask it and split it for you.');
 });
 
-// Manual Stats Command (Owner Only)
+// Manual Stats Command (Owner Only - validated by Username)
 bot.command('stats', (ctx) => {
-    if (ctx.from.id === OWNER_ID) {
+    if (ctx.from.username === OWNER_USERNAME) {
         ctx.reply(generateReport());
     } else {
         ctx.reply("❌ Unauthorized. This command is for the owner only.");
@@ -260,6 +261,7 @@ setInterval(async () => {
     if (report.includes("No activity")) return;
 
     try {
+        // Send to your ID directly to ensure it reaches you
         await bot.telegram.sendMessage(OWNER_ID, report);
         console.log("[REPORT] Hourly stats sent to Owner.");
     } catch (e) {
