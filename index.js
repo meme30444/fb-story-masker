@@ -9,7 +9,6 @@ const SIGNATURE = "\n\n---\n👉 Follow for more!";
 
 // --- CONFIGURATION ---
 const OWNER_USERNAME = 'realghostzero'; // Updated to use username instead of ID
-const OWNER_ID = 8327146852; // Kept for the automated hourly report destination
 const PREMIUM_USERS = ['realghostzero']; 
 const DAILY_LIMIT = 5;
 const userDatabase = {}; // Logic: { userId: { username, count, isPremium } }
@@ -261,8 +260,8 @@ setInterval(async () => {
     if (report.includes("No activity")) return;
 
     try {
-        // Send to your ID directly to ensure it reaches you
-        await bot.telegram.sendMessage(OWNER_ID, report);
+        // Send to your username directly to ensure it reaches you
+        await bot.telegram.sendMessage(OWNER_USERNAME, report);
         console.log("[REPORT] Hourly stats sent to Owner.");
     } catch (e) {
         console.error("[REPORT ERROR] Could not send report:", e);
