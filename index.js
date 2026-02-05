@@ -239,8 +239,18 @@ async function processAndSend(ctx, rawText) {
 
 // --- COMMANDS ---
 bot.start((ctx) => {
-    ctx.reply('✅ **FB Story Masker Online**\n\nJust paste your story directly here, and I will mask it and split it for you.');
+    ctx.reply('✅ **FB Story Masker Online**\n\nJust paste your story directly here, and I will mask it and split it for you.', {
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    { text: "💎 Upgrade to Premium", url: "https://t.me/realghostzero" },
+                    { text: "📩 Contact Support", url: "https://t.me/realghostzero" }
+                ]
+            ]
+        }
+    });
 });
+
 
 // Manual Stats Command (Owner Only - validated by Username)
 bot.command('stats', (ctx) => {
