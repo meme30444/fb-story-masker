@@ -104,6 +104,9 @@ const dictionary = {
     'slut': 'sl¥t',
     'whore': 'wh0re',
     'motherfucker': 'mofo',
+    'doggy': 'd@ggy',
+    'doggystyle': 'd@ggy$tyle',
+    'missionary': 'mission@ry',
 
     // Sensitive Environments
     'bedroom': 'b3droom',
@@ -162,12 +165,12 @@ function insertSneakyAd(text) {
 
 // --- CORE REPORT GENERATOR ---
 function generateReport() {
-    if (Object.keys(userDatabase).length === 0) return "📊 **No activity recorded yet.**";
+    if (Object.keys(userDatabase).length === 0) return "📊 No activity recorded yet.";
 
-    let report = "📊 **BUSINESS REPORT**\n\n";
-    report += `📈 **Total Stories (Session):** ${totalStoriesProcessed}\n`;
-    report += `👥 **Total Unique Users:** ${Object.keys(userDatabase).length}\n\n`;
-    report += "📝 **User Breakdown:**\n";
+    let report = "📊 BUSINESS REPORT\n\n";
+    report += `📈 Total Stories (Session): ${totalStoriesProcessed}\n`;
+    report += `👥 Total Unique Users: ${Object.keys(userDatabase).length}\n\n`;
+    report += "📝 User Breakdown:\n";
 
     for (const id in userDatabase) {
         const user = userDatabase[id];
